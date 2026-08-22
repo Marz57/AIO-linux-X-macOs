@@ -26,6 +26,30 @@ Kamu tidak perlu menginstal dependensi tambahan karena script ini memanfaatkan *
 Buka terminal dan jalankan perintah berikut:
 
 ```bash
-git clone [https://github.com/Marz57/nama-repo-kamu.git](https://github.com/Marz57/nama-repo-kamu.git)
-cd nama-repo-kamu
-chmod +x macOS_kali_ultimate.sh
+git clone https://github.com/Marz57/kali-x-macos
+cd kali-x-macos
+chmod +x gaskeun.sh
+
+2. Menjalankan Script
+​Jalankan script menggunakan perintah:
+​./macOS_kali_ultimate.sh
+​Nanti akan muncul menu interaktif:
+​Pilih 1 untuk melakukan Backup seluruh tampilan macOS kamu saat ini.
+​Pilih 2 untuk melakukan Restore tampilan pada sistem Kali Linux yang baru di-install.
+​Catatan Penting setelah Restore:
+Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
+​📁 Struktur Direktori Backup
+​Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
+​Kali_macOS_Backup/
+├── kali_macos_theme.tar.gz   # Arsip kompresi seluruh tema, ikon, font & ekstensi
+├── gnome_settings.dconf      # Registry konfigurasi GNOME Shell
+├── wallpapers/               # Salinan wallpaper aktif
+├── plymouth_backup/          # File tema booting Plymouth
+├── system_extensions/        # Ekstensi tingkat sistem (/usr/share)
+└── raw_assets/               # Folder mentahan aset UI
+​👥 Kredit & Informasi
+​Coded by : OfficialMarz57
+​TikTok : M a r z 5 7
+​GitHub : OfficialMarz57
+​Special Thanks : DevlinTeamSec
+​Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok.
