@@ -2,7 +2,8 @@
 *preview*
 
 <img src="screenshoot.png">
-**KalMacScript** adalah alat otomatisasi ringan (*lightweight*) yang dirancang khusus untuk melakukan **Backup** dan **Restore** seluruh kustomisasi tampilan macOS pada **Kali Linux GNOME (Wayland/X11)**. 
+
+***KalMacScript*** adalah alat otomatisasi ringan (*lightweight*) yang dirancang khusus untuk melakukan **Backup** dan **Restore** seluruh kustomisasi tampilan macOS pada **Kali Linux GNOME (Wayland/X11)**. 
 
 Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ekstensi GNOME Shell, wallpaper aktif, hingga animasi *booting* (Plymouth).
 
