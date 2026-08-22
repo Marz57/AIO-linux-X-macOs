@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=osx
+Description=A theme that features the osx logo.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/osx
+ScriptFile=/usr/share/plymouth/themes/osx/osx.script

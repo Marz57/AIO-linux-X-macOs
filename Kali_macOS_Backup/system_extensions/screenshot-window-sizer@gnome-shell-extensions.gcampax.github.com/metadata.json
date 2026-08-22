@@ -1,0 +1,12 @@
+{
+  "name": "Screenshot Window Sizer",
+  "description": "Resize windows for GNOME Software screenshots with Ctrl+Alt+s shortcut",
+  "uuid": "screenshot-window-sizer@gnome-shell-extensions.gcampax.github.com",
+  "gettext-domain": "gnome-shell-extensions",
+  "settings-schema": "org.gnome.shell.extensions.screenshot-window-sizer",
+  "shell-version": [
+    "50"
+  ],
+  "version-name": "50.2",
+  "url": "https://gitlab.gnome.org/GNOME/gnome-shell-extensions"
+}

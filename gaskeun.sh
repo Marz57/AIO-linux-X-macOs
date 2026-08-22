@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-BACKUP_DIR="$HOME/Kali_macOS_Backup"
+# Lokasi backup sekarang tersimpan di dalam folder repository script ini
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKUP_DIR="$SCRIPT_DIR/Kali_macOS_Backup"
+
 TAR_FILE="$BACKUP_DIR/kali_macos_theme.tar.gz"
 DCONF_FILE="$BACKUP_DIR/gnome_settings.dconf"
 PLYMOUTH_DIR="$BACKUP_DIR/plymouth_backup"
@@ -19,7 +22,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 get_sequential_banner() {
-    local BANNER_DIR="$(dirname "$0")/banners"
+    local BANNER_DIR="$SCRIPT_DIR/banners"
 
     mapfile -t BANNERS < <(
         find "$BANNER_DIR" -maxdepth 1 -type f -name "*.txt" 2>/dev/null | sort
@@ -67,15 +70,23 @@ draw_banner() {
     echo ""
 }
 
-
 do_backup() {
     draw_banner
-    echo -e "${YELLOW}[*] Starting deep backup...${NC}\n"
+    echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
     
     mkdir -p "$BACKUP_DIR" "$PLYMOUTH_DIR" "$SYS_EXT_DIR" "$WALLPAPER_DIR" "$RAW_ASSETS_DIR"
 
-    echo -e "${BLUE}[+]${NC} Exporting Dconf Settings..."
-    dconf dump /org/gnome/ > "$DCONF_FILE"
+    echo -e "${BLUE}[+]${NC} Exporting UI/Desktop Dconf Settings (Sanitized)..."
+    # Hanya export konfigurasi UI, Shell, Desktop, dan Interface
+    dconf dump /org/gnome/desktop/ > "$DCONF_FILE"
+    dconf dump /org/gnome/shell/ >> "$DCONF_FILE"
+
+    # PRIVACY SANITIZER (Pembersih Otomatis Data Pribadi)
+    sed -i "s|$HOME|~|g" "$DCONF_FILE"
+    sed -i "s|/home/[^/]*|~|g" "$DCONF_FILE"
+    sed -i '/[a-zA-Z0-9._%+-]\+@[a-zA-Z0-9.-]\+\.[a-zA-Z]\{2,\}/d' "$DCONF_FILE" 2>/dev/null || true # Hapus email
+    sed -i '/recent-files/d' "$DCONF_FILE" 2>/dev/null || true # Hapus history recent files
+    sed -i '/online-accounts/d' "$DCONF_FILE" 2>/dev/null || true # Hapus akun online
 
     echo -e "${BLUE}[+]${NC} Backing up active Wallpaper..."
     BG_URI=$(gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d "'")
@@ -113,7 +124,7 @@ do_backup() {
 
     echo ""
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
-    echo -e "${GREEN}${BOLD}|            BACKUP COMPLETED 100%            |${NC}"
+    echo -e "${GREEN}${BOLD}|      BACKUP & PRIVACY CLEANUP COMPLETED     |${NC}"
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
     echo -e "${CYAN}Path : $BACKUP_DIR${NC}"
     echo -e "${CYAN}Size : $(du -h "$TAR_FILE" 2>/dev/null | cut -f1)${NC}\n"
