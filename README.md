@@ -28,11 +28,11 @@ Buka terminal dan jalankan perintah berikut:
 ```bash
 git clone https://github.com/Marz57/kali-x-macos
 cd kali-x-macos
-chmod +x gaskeun.sh
+chmod +x gaskeun.sh```
 
 2. Menjalankan Script
 ​Jalankan script menggunakan perintah:
-​./macOS_kali_ultimate.sh
+​```bash ./macOS_kali_ultimate.sh```
 ​Nanti akan muncul menu interaktif:
 ​Pilih 1 untuk melakukan Backup seluruh tampilan macOS kamu saat ini.
 ​Pilih 2 untuk melakukan Restore tampilan pada sistem Kali Linux yang baru di-install.
