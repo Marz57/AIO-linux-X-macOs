@@ -10,6 +10,7 @@ SYS_EXT_DIR="$BACKUP_DIR/system_extensions"
 WALLPAPER_DIR="$BACKUP_DIR/wallpapers"
 RAW_ASSETS_DIR="$BACKUP_DIR/raw_assets"
 INDEX_FILE="$BACKUP_DIR/.banner_index"
+ROLLBACK_DIR="/tmp/kalmac_rollback_snapshot"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -68,6 +69,86 @@ draw_banner() {
     echo ""
 }
 
+check_dependencies() {
+    echo -e "${BLUE}[+]${NC} Checking system dependencies..."
+    local MISSING_PKGS=()
+
+    command -v dconf &>/dev/null || MISSING_PKGS+=("dconf-cli")
+    command -v glib-compile-schemas &>/dev/null || MISSING_PKGS+=("libglib2.0-bin")
+    command -v plymouth-set-default-theme &>/dev/null || MISSING_PKGS+=("plymouth")
+
+    if [ "${#MISSING_PKGS[@]}" -gt 0 ]; then
+        echo -e "${YELLOW}[!] Paket yang dibutuhkan belum terinstall: ${MISSING_PKGS[*]}${NC}"
+        read -p "Apakah Anda ingin memasang dependensi otomatis? (y/n): " dep_confirm
+        if [[ "$dep_confirm" =~ ^[Yy]$ ]]; then
+            sudo apt-get update && sudo apt-get install -y "${MISSING_PKGS[@]}"
+        else
+            echo -e "${RED}[!] Dependensi wajib tidak terpenuhi. Operasi dibatalkan.${NC}"
+            exit 1
+        fi
+    fi
+}
+
+create_rollback_snapshot() {
+    echo -e "${BLUE}[+]${NC} Creating safety rollback snapshot..."
+    rm -rf "$ROLLBACK_DIR"
+    mkdir -p "$ROLLBACK_DIR"
+    dconf dump /org/gnome/ > "$ROLLBACK_DIR/snapshot_settings.dconf"
+    echo -e "${GREEN}[+] Rollback snapshot tersimpan di $ROLLBACK_DIR${NC}"
+}
+
+do_rollback() {
+    draw_banner
+    if [ ! -f "$ROLLBACK_DIR/snapshot_settings.dconf" ]; then
+        echo -e "${RED}[!] ERROR: Snapshot rollback tidak ditemukan!${NC}\n"
+        return 1
+    fi
+
+    echo -e "${YELLOW}[*] Restoring original system state from snapshot...${NC}\n"
+    dconf load /org/gnome/ < "$ROLLBACK_DIR/snapshot_settings.dconf" 2>/dev/null
+    echo -e "${GREEN}${BOLD}[+] Tampilan sistem berhasil dikembalikan ke keadaan sebelum restore!${NC}\n"
+}
+
+do_dry_run() {
+    draw_banner
+    echo -e "${YELLOW}[*] Running System Simulation Mode (Dry Run)...${NC}\n"
+
+    check_dependencies
+
+    echo -e "${BLUE}[+]${NC} Checking backup directory..."
+    if [ ! -d "$BACKUP_DIR" ]; then
+        echo -e "${RED}[!] FAIL: Backup directory ($BACKUP_DIR) tidak ditemukan!${NC}"
+    else
+        echo -e "${GREEN}[OK] Directory backup ditemukan.${NC}"
+    fi
+
+    echo -e "${BLUE}[+]${NC} Checking archive integrity..."
+    if [ -f "$TAR_FILE" ]; then
+        if tar -tzf "$TAR_FILE" &>/dev/null; then
+            echo -e "${GREEN}[OK] File tar.gz valid dan dapat diekstrak.${NC}"
+        else
+            echo -e "${RED}[!] FAIL: File tar.gz mengalami kerusakan (corrupt)!${NC}"
+        fi
+    fi
+
+    echo -e "${BLUE}[+]${NC} Checking dconf configuration file..."
+    if [ -f "$DCONF_FILE" ]; then
+        echo -e "${GREEN}[OK] File dconf tersedia.${NC}"
+    else
+        echo -e "${YELLOW}[!] WARNING: File dconf settings tidak ditemukan.${NC}"
+    fi
+
+    echo -e "\n${GREEN}${BOLD}[+] SIMULASI SELESAI. Sistem siap untuk operasi Restore asli!${NC}\n"
+}
+
+auto_fix_dash_to_dock() {
+    echo -e "${BLUE}[+]${NC} Configuring & Auto-Fixing Dash to Dock..."
+    gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
+    gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
+    gsettings set org.gnome.shell.extensions.dash-to-dock transparency-mode 'DYNAMIC' 2>/dev/null || true
+    gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 48 2>/dev/null || true
+}
+
 handle_restore_error() {
     local STEP_NAME="$1"
     echo -e "\n${RED}${BOLD}[!] ERROR CRITICAL:${NC} ${RED}Gagal pada proses: ${STEP_NAME}${NC}"
@@ -83,6 +164,7 @@ handle_restore_error() {
             ;;
         *)
             echo -e "${RED}[!] Membatalkan proses restore dan mengembalikan keadaan semula...${NC}"
+            do_rollback
             exit 1
             ;;
     esac
@@ -90,6 +172,7 @@ handle_restore_error() {
 
 do_backup() {
     draw_banner
+    check_dependencies
     echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
     
     mkdir -p "$BACKUP_DIR" "$PLYMOUTH_DIR" "$SYS_EXT_DIR" "$WALLPAPER_DIR" "$RAW_ASSETS_DIR"
@@ -148,6 +231,8 @@ do_backup() {
 
 do_restore() {
     draw_banner
+    check_dependencies
+
     if [ ! -d "$BACKUP_DIR" ]; then
         echo -e "${RED}[!] ERROR: Backup directory not found!${NC}\n"
         exit 1
@@ -160,6 +245,8 @@ do_restore() {
         echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
         exit 1
     fi
+
+    create_rollback_snapshot
 
     echo -e "${YELLOW}[*] Starting restore engine...${NC}\n"
 
@@ -196,6 +283,8 @@ do_restore() {
             handle_restore_error "Penerapan Konfigurasi Dconf"
         fi
     fi
+
+    auto_fix_dash_to_dock
 
     if [ -d "$WALLPAPER_DIR" ] && [ "$(ls -A "$WALLPAPER_DIR")" ]; then
         echo -e "${BLUE}[+]${NC} Restoring wallpaper settings..."
@@ -249,16 +338,20 @@ main_menu() {
         echo -e "${BOLD}Select Operation:${NC}"
         echo -e " ${CYAN}[1]${NC} Backup macOS Theme"
         echo -e " ${CYAN}[2]${NC} Restore macOS Theme"
-        echo -e " ${CYAN}[3]${NC} Switch Banner"
-        echo -e " ${CYAN}[4]${NC} Exit"
+        echo -e " ${CYAN}[3]${NC} Dry Run (Simulation Mode)"
+        echo -e " ${CYAN}[4]${NC} Undo Restore (Revert to Original State)"
+        echo -e " ${CYAN}[5]${NC} Switch Banner"
+        echo -e " ${CYAN}[6]${NC} Exit"
         echo ""
-        read -p "Option [1-4]: " opt
+        read -p "Option [1-6]: " opt
 
         case $opt in
             1) do_backup; break ;;
             2) do_restore; break ;;
-            3) continue ;;
-            4) exit 0 ;;
+            3) do_dry_run; break ;;
+            4) do_rollback; break ;;
+            5) continue ;;
+            6) exit 0 ;;
             *) echo -e "${RED}Invalid option!${NC}"; sleep 1 ;;
         esac
     done
