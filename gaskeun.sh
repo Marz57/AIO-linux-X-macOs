@@ -210,16 +210,27 @@ do_restore() {
     fi
 
     if [ -f "$PLYMOUTH_DIR/current_theme.txt" ]; then
-        echo -e "${BLUE}[+]${NC} Restoring Plymouth boot theme..."
-        THEME_NAME=$(cat "$PLYMOUTH_DIR/current_theme.txt")
-        if [ -d "$PLYMOUTH_DIR/$THEME_NAME" ]; then
-            if ! sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/ 2>/dev/null; then
-                handle_restore_error "Salin Tema Plymouth"
-            else
-                sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
-                echo -e "${BLUE}[+]${NC} Updating initramfs..."
-                sudo update-initramfs -u 2>/dev/null || true
+        echo ""
+        echo -e "${YELLOW}[?] Konfirmasi Restorasi Tema Plymouth Booting:${NC}"
+        echo -e " ${CYAN}[1]${NC} Ya, ganti tema Plymouth dengan hasil backup"
+        echo -e " ${CYAN}[2]${NC} Tidak, biarkan tema Plymouth bawaan/normal"
+        echo ""
+        read -p "Pilihan Plymouth [1-2]: " ply_opt
+
+        if [ "$ply_opt" == "1" ]; then
+            echo -e "${BLUE}[+]${NC} Restoring Plymouth boot theme..."
+            THEME_NAME=$(cat "$PLYMOUTH_DIR/current_theme.txt")
+            if [ -d "$PLYMOUTH_DIR/$THEME_NAME" ]; then
+                if ! sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/ 2>/dev/null; then
+                    handle_restore_error "Salin Tema Plymouth"
+                else
+                    sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
+                    echo -e "${BLUE}[+]${NC} Updating initramfs..."
+                    sudo update-initramfs -u 2>/dev/null || true
+                fi
             fi
+        else
+            echo -e "${GRAY}[*] Melewati restorasi tema Plymouth...${NC}"
         fi
     fi
 
