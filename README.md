@@ -13,7 +13,7 @@ Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ek
 
 ## 🌟 Fitur Utama
 
-- 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, `.themes`, `.icons`, dan font sistem.
+- 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, ` .themes`, ` .icons`, dan font sistem.
 - ⚙️ **Dconf/GSettings Registry**: Mengatur ulang tata letak dock, shortcut, dan preferensi tampilan GNOME secara presisi.
 - 🧹 **Privacy Sanitizer**: Otomatis membersihkan data pribadi sensitif (email, recent files, online accounts) pada file dconf sebelum disimpan.
 - 🛠️ **Auto-Install Dependensi**: Mendeteksi paket sistem yang belum terpasang (`dconf-cli`, `libglib2.0-bin`, `plymouth`) dan menawarkan instalasi otomatis.
