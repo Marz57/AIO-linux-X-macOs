@@ -41,37 +41,41 @@ Buka terminal dan jalankan perintah berikut:
 git clone [https://github.com/Marz57/kali-x-macos](https://github.com/Marz57/kali-x-macos)
 cd kali-x-macos
 chmod +x gaskeun.sh
+```
 
 2. Menjalankan Script
-Jalankan script menggunakan perintah:
+   Jalankan script menggunakan perintah:
+
+```
 ./gaskeun.sh
+```
 
 Nanti akan muncul menu interaktif:
- * Pilih 1 untuk melakukan Backup seluruh tampilan macOS kamu saat ini.
- * Pilih 2 untuk melakukan Restore tampilan pada sistem Kali Linux yang baru.
- * Pilih 3 untuk menjalankan Dry Run (Simulation Mode) guna mengecek integritas backup tanpa merusak sistem.
- * Pilih 4 untuk melakukan Undo Restore (Revert) jika ingin mengembalikan tampilan ke keadaan sebelum restore.
- * Pilih 5 untuk mengganti variasi tampilan Banner ASCII.
- * Pilih 6 untuk Keluar.
-> Catatan Penting setelah Restore:
-> Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
-> 
-📁 Struktur Direktori Backup
-Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
-Kali_macOS_Backup/
-├── kali_macos_theme.tar.gz   # Arsip kompresi seluruh tema, ikon, font & ekstensi
-├── gnome_settings.dconf      # Registry konfigurasi GNOME Shell (sanitized)
-├── wallpapers/               # Salinan wallpaper aktif
-├── plymouth_backup/          # File tema booting Plymouth
-├── system_extensions/        # Ekstensi tingkat sistem (/usr/share)
-└── raw_assets/               # Folder mentahan aset UI
+
+- Pilih 1 untuk melakukan Backup seluruh tampilan macOS kamu saat ini.
+- Pilih 2 untuk melakukan Restore tampilan pada sistem Kali Linux yang baru.
+- Pilih 3 untuk menjalankan Dry Run (Simulation Mode) guna mengecek integritas backup tanpa merusak sistem.
+- Pilih 4 untuk melakukan Undo Restore (Revert) jika ingin mengembalikan tampilan ke keadaan sebelum restore.
+- Pilih 5 untuk mengganti variasi tampilan Banner ASCII.
+- Pilih 6 untuk Keluar.
+  > Catatan Penting setelah Restore:
+  > Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
+  >
+  > 📁 Struktur Direktori Backup
+  > Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
+  > Kali_macOS_Backup/
+  > ├── kali_macos_theme.tar.gz # Arsip kompresi seluruh tema, ikon, font & ekstensi
+  > ├── gnome_settings.dconf # Registry konfigurasi GNOME Shell (sanitized)
+  > ├── wallpapers/ # Salinan wallpaper aktif
+  > ├── plymouth_backup/ # File tema booting Plymouth
+  > ├── system_extensions/ # Ekstensi tingkat sistem (/usr/share)
+  > └── raw_assets/ # Folder mentahan aset UI
 
 👥 Kredit & Informasi
- * Coded by : OfficialMarz57
- * TikTok : M a r z 5 7
- * GitHub : OfficialMarz57
- * Instagram : M ? r z 5 7
- * Special Thanks : DevlinTeamSec
-> Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
-> 
 
+- Coded by : OfficialMarz57
+- TikTok : M a r z 5 7
+- GitHub : OfficialMarz57
+- Instagram : M ? r z 5 7
+- Special Thanks : DevlinTeamSec
+  > Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
