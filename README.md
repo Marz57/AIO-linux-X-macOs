@@ -37,7 +37,7 @@ Script ini akan mendeteksi dan menawarkan instalasi otomatis jika ada dependensi
 Buka terminal dan jalankan perintah berikut:
 
 ```bash
-git clone [https://github.com/Marz57/kali-x-macos](https://github.com/Marz57/kali-x-macos)
+git clone https://github.com/Marz57/kali-x-macos
 cd kali-x-macos
 chmod +x gaskeun.sh
 ```
