@@ -11,8 +11,6 @@ Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ek
 > **CATATAN TENTANG PLYMOUTH:**  
 > Sebelum script mengeksekusi perintah penyalinan file tema boot dan pembaruan sistem bootloader (`initramfs`), sistem akan bertanya kepada pengguna apakah Plymouth ikut di-restore sekalian atau akan dilewatkan sepenuhnya tanpa merubah tampilan Plymouth bawaan.
 
----
-
 ## 🌟 Fitur Utama
 
 - 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, `.themes`, `.icons`, dan font sistem.
