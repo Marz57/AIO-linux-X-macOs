@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# Lokasi backup sekarang tersimpan di dalam folder repository script ini
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$SCRIPT_DIR/Kali_macOS_Backup"
 
@@ -48,7 +47,6 @@ get_sequential_banner() {
 draw_banner() {
     clear
 
-    # Daftar opsi warna acak untuk banner
     local COLORS=('\033[0;31m' '\033[0;32m' '\033[0;33m' '\033[0;34m' '\033[0;35m' '\033[0;36m' '\033[1;35m' '\033[1;36m')
     local RANDOM_COLOR="${COLORS[$RANDOM % ${#COLORS[@]}]}"
 
@@ -70,6 +68,26 @@ draw_banner() {
     echo ""
 }
 
+handle_restore_error() {
+    local STEP_NAME="$1"
+    echo -e "\n${RED}${BOLD}[!] ERROR CRITICAL:${NC} ${RED}Gagal pada proses: ${STEP_NAME}${NC}"
+    echo -e "${YELLOW}[?] Proses restore mengalami kendala yang dapat membuat tampilan tidak sempurna.${NC}"
+    echo -e " ${CYAN}[1]${NC} Tetap Lanjutkan Restore (Abaikan Error)"
+    echo -e " ${CYAN}[2]${NC} Batalkan & Batalkan Perubahan (Kembali ke Semula)"
+    echo ""
+    read -p "Pilihan [1-2]: " err_opt
+    case $err_opt in
+        1)
+            echo -e "${YELLOW}[*] Melanjutkan proses restore dengan potensi kerugian tampilan...${NC}\n"
+            return 0
+            ;;
+        *)
+            echo -e "${RED}[!] Membatalkan proses restore dan mengembalikan keadaan semula...${NC}"
+            exit 1
+            ;;
+    esac
+}
+
 do_backup() {
     draw_banner
     echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
@@ -77,16 +95,14 @@ do_backup() {
     mkdir -p "$BACKUP_DIR" "$PLYMOUTH_DIR" "$SYS_EXT_DIR" "$WALLPAPER_DIR" "$RAW_ASSETS_DIR"
 
     echo -e "${BLUE}[+]${NC} Exporting UI/Desktop Dconf Settings (Sanitized)..."
-    # Hanya export konfigurasi UI, Shell, Desktop, dan Interface
     dconf dump /org/gnome/desktop/ > "$DCONF_FILE"
     dconf dump /org/gnome/shell/ >> "$DCONF_FILE"
 
-    # PRIVACY SANITIZER (Pembersih Otomatis Data Pribadi)
     sed -i "s|$HOME|~|g" "$DCONF_FILE"
     sed -i "s|/home/[^/]*|~|g" "$DCONF_FILE"
-    sed -i '/[a-zA-Z0-9._%+-]\+@[a-zA-Z0-9.-]\+\.[a-zA-Z]\{2,\}/d' "$DCONF_FILE" 2>/dev/null || true # Hapus email
-    sed -i '/recent-files/d' "$DCONF_FILE" 2>/dev/null || true # Hapus history recent files
-    sed -i '/online-accounts/d' "$DCONF_FILE" 2>/dev/null || true # Hapus akun online
+    sed -i '/[a-zA-Z0-9._%+-]\+@[a-zA-Z0-9.-]\+\.[a-zA-Z]\{2,\}/d' "$DCONF_FILE" 2>/dev/null || true
+    sed -i '/recent-files/d' "$DCONF_FILE" 2>/dev/null || true
+    sed -i '/online-accounts/d' "$DCONF_FILE" 2>/dev/null || true
 
     echo -e "${BLUE}[+]${NC} Backing up active Wallpaper..."
     BG_URI=$(gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d "'")
@@ -137,14 +153,26 @@ do_restore() {
         exit 1
     fi
 
+    CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
+    if [[ ! "$CURRENT_DE" =~ [Gg][Nn][Oo][Mm][Ee] ]]; then
+        echo -e "${RED}[!] ERROR: Incompatible Desktop Environment!${NC}"
+        echo -e "${RED}Backup dibuat untuk GNOME Desktop, sedangkan sistem kamu menggunakan: ${YELLOW}${CURRENT_DE:-Unknown}${NC}"
+        echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
+        exit 1
+    fi
+
     echo -e "${YELLOW}[*] Starting restore engine...${NC}\n"
 
     if [ -f "$TAR_FILE" ]; then
         echo -e "${BLUE}[+]${NC} Extracting theme archive to home..."
-        tar -xzf "$TAR_FILE" -C "$HOME"
+        if ! tar -xzf "$TAR_FILE" -C "$HOME" 2>/dev/null; then
+            handle_restore_error "Ekstraksi Arsip Tema (tar.gz)"
+        fi
     elif [ -d "$RAW_ASSETS_DIR" ]; then
         echo -e "${BLUE}[+]${NC} Copying raw assets to home..."
-        cp -r "$RAW_ASSETS_DIR"/* "$HOME/" 2>/dev/null || true
+        if ! cp -r "$RAW_ASSETS_DIR"/* "$HOME/" 2>/dev/null; then
+            handle_restore_error "Salin Aset Mentah (raw_assets)"
+        fi
     fi
 
     echo -e "${BLUE}[+]${NC} Compiling schemas & setting permissions..."
@@ -157,12 +185,16 @@ do_restore() {
 
     if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR")" ]; then
         echo -e "${BLUE}[+]${NC} Restoring system-wide extensions..."
-        sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null || true
+        if ! sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null; then
+            handle_restore_error "Restorasi Ekstensi Sistem"
+        fi
     fi
 
     if [ -f "$DCONF_FILE" ]; then
         echo -e "${BLUE}[+]${NC} Applying Dconf configuration..."
-        dconf load /org/gnome/ < "$DCONF_FILE"
+        if ! dconf load /org/gnome/ < "$DCONF_FILE" 2>/dev/null; then
+            handle_restore_error "Penerapan Konfigurasi Dconf"
+        fi
     fi
 
     if [ -d "$WALLPAPER_DIR" ] && [ "$(ls -A "$WALLPAPER_DIR")" ]; then
@@ -172,8 +204,8 @@ do_restore() {
         FIRST_WP=$(ls "$WALLPAPER_DIR" | head -n 1)
         if [ -n "$FIRST_WP" ]; then
             WP_URI="file://$HOME/Pictures/$FIRST_WP"
-            gsettings set org.gnome.desktop.background picture-uri "$WP_URI"
-            gsettings set org.gnome.desktop.background picture-uri-dark "$WP_URI"
+            gsettings set org.gnome.desktop.background picture-uri "$WP_URI" 2>/dev/null || true
+            gsettings set org.gnome.desktop.background picture-uri-dark "$WP_URI" 2>/dev/null || true
         fi
     fi
 
@@ -181,14 +213,17 @@ do_restore() {
         echo -e "${BLUE}[+]${NC} Restoring Plymouth boot theme..."
         THEME_NAME=$(cat "$PLYMOUTH_DIR/current_theme.txt")
         if [ -d "$PLYMOUTH_DIR/$THEME_NAME" ]; then
-            sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/
-            sudo plymouth-set-default-theme -R "$THEME_NAME"
-            echo -e "${BLUE}[+]${NC} Updating initramfs..."
-            sudo update-initramfs -u 2>/dev/null || true
+            if ! sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/ 2>/dev/null; then
+                handle_restore_error "Salin Tema Plymouth"
+            else
+                sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
+                echo -e "${BLUE}[+]${NC} Updating initramfs..."
+                sudo update-initramfs -u 2>/dev/null || true
+            fi
         fi
     fi
 
-    gsettings set org.gnome.shell disable-user-extensions false
+    gsettings set org.gnome.shell disable-user-extensions false 2>/dev/null || true
 
     echo ""
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
