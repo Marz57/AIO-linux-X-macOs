@@ -73,6 +73,7 @@ Kali_macOS_Backup/
 ├── plymouth_backup/          # File tema booting Plymouth
 ├── system_extensions/        # Ekstensi tingkat sistem (/usr/share)
 └── raw_assets/               # Folder mentahan aset UI
+```
 
 👥 Kredit & Informasi
 
@@ -82,4 +83,7 @@ Kali_macOS_Backup/
 - Instagram : M ? r z 5 7
 - Special Thanks : DevlinTeamSec
   > Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
+
+```
+
 ```
