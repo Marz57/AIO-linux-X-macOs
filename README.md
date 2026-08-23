@@ -64,7 +64,7 @@ Nanti akan muncul menu interaktif:
   ### 📁 Struktur Direktori Backup
 
   -> Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
-  -> Kali_macOS_Backup/
+  -> Kali_macOS_Backup
   -> ├── kali_macos_theme.tar.gz # Arsip kompresi seluruh tema, ikon, font & ekstensi
   -> ├── gnome_settings.dconf # Registry konfigurasi GNOME Shell (sanitized)
   -> ├── wallpapers/ # Salinan wallpaper aktif
