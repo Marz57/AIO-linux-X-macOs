@@ -8,7 +8,8 @@ _preview_
 
 Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ekstensi GNOME Shell, wallpaper aktif, hingga animasi _booting_ (Plymouth).
 
-> **CATATAN TENTANG PLYMOUTH:**  
+-> **CATATAN TENTANG PLYMOUTH:**
+
 > Sebelum script mengeksekusi perintah penyalinan file tema boot dan pembaruan sistem bootloader (`initramfs`), sistem akan bertanya kepada pengguna apakah Plymouth ikut di-restore sekalian atau akan dilewatkan sepenuhnya tanpa merubah tampilan Plymouth bawaan.
 
 ## 🌟 Fitur Utama
@@ -83,7 +84,3 @@ Kali_macOS_Backup/
 - Instagram : M ? r z 5 7
 - Special Thanks : DevlinTeamSec
   > Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
-
-```
-
-```
