@@ -84,4 +84,5 @@ Kali_macOS_Backup/
 - Instagram : [M ? r z 5 7](https://www.instagram.com/official_marz57)
 - Saweria : [onlymarz57](https://saweria.co/onlymarz57)
 - Special Thanks : DevlinTeamSec
+
   > Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
