@@ -69,6 +69,26 @@ draw_banner() {
     echo ""
 }
 
+show_loading() {
+    local text="$1"
+    local delay=0.1
+    local spinstr='|/-\'
+    echo -e -n "${YELLOW}[*] $text ${NC}"
+    for i in {1..20}; do
+        local temp=${spinstr#?}
+        printf " [%c] " "$spinstr"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b"
+    done
+    echo -e " ${GREEN}[DONE]${NC}"
+}
+
+pause_to_menu() {
+    echo ""
+    read -p "Tekan [Enter] untuk kembali ke menu utama..."
+}
+
 check_dependencies() {
     echo -e "${BLUE}[+]${NC} Checking system dependencies..."
     local MISSING_PKGS=()
@@ -84,7 +104,8 @@ check_dependencies() {
             sudo apt-get update && sudo apt-get install -y "${MISSING_PKGS[@]}"
         else
             echo -e "${RED}[!] Dependensi wajib tidak terpenuhi. Operasi dibatalkan.${NC}"
-            exit 1
+            pause_to_menu
+            return 1
         fi
     fi
 }
@@ -101,19 +122,21 @@ do_rollback() {
     draw_banner
     if [ ! -f "$ROLLBACK_DIR/snapshot_settings.dconf" ]; then
         echo -e "${RED}[!] ERROR: Snapshot rollback tidak ditemukan!${NC}\n"
+        pause_to_menu
         return 1
     fi
 
     echo -e "${YELLOW}[*] Restoring original system state from snapshot...${NC}\n"
     dconf load /org/gnome/ < "$ROLLBACK_DIR/snapshot_settings.dconf" 2>/dev/null
     echo -e "${GREEN}${BOLD}[+] Tampilan sistem berhasil dikembalikan ke keadaan sebelum restore!${NC}\n"
+    pause_to_menu
 }
 
 do_dry_run() {
     draw_banner
     echo -e "${YELLOW}[*] Running System Simulation Mode (Dry Run)...${NC}\n"
 
-    check_dependencies
+    check_dependencies || return
 
     echo -e "${BLUE}[+]${NC} Checking backup directory..."
     if [ ! -d "$BACKUP_DIR" ]; then
@@ -138,7 +161,12 @@ do_dry_run() {
         echo -e "${YELLOW}[!] WARNING: File dconf settings tidak ditemukan.${NC}"
     fi
 
+    echo ""
+    show_loading "Menganalisis hasil simulasi..."
+    sleep 1
+
     echo -e "\n${GREEN}${BOLD}[+] SIMULASI SELESAI. Sistem siap untuk operasi Restore asli!${NC}\n"
+    pause_to_menu
 }
 
 auto_fix_dash_to_dock() {
@@ -165,14 +193,13 @@ handle_restore_error() {
         *)
             echo -e "${RED}[!] Membatalkan proses restore dan mengembalikan keadaan semula...${NC}"
             do_rollback
-            exit 1
             ;;
     esac
 }
 
 do_backup() {
     draw_banner
-    check_dependencies
+    check_dependencies || return
     echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
     
     mkdir -p "$BACKUP_DIR" "$PLYMOUTH_DIR" "$SYS_EXT_DIR" "$WALLPAPER_DIR" "$RAW_ASSETS_DIR"
@@ -227,15 +254,18 @@ do_backup() {
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
     echo -e "${CYAN}Path : $BACKUP_DIR${NC}"
     echo -e "${CYAN}Size : $(du -h "$TAR_FILE" 2>/dev/null | cut -f1)${NC}\n"
+
+    pause_to_menu
 }
 
 do_restore() {
     draw_banner
-    check_dependencies
+    check_dependencies || return
 
     if [ ! -d "$BACKUP_DIR" ]; then
         echo -e "${RED}[!] ERROR: Backup directory not found!${NC}\n"
-        exit 1
+        pause_to_menu
+        return 1
     fi
 
     CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
@@ -243,7 +273,8 @@ do_restore() {
         echo -e "${RED}[!] ERROR: Incompatible Desktop Environment!${NC}"
         echo -e "${RED}Backup dibuat untuk GNOME Desktop, sedangkan sistem kamu menggunakan: ${YELLOW}${CURRENT_DE:-Unknown}${NC}"
         echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
-        exit 1
+        pause_to_menu
+        return 1
     fi
 
     create_rollback_snapshot
@@ -330,6 +361,8 @@ do_restore() {
     echo -e "${GREEN}${BOLD}|           RESTORE COMPLETED 100%            |${NC}"
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
     echo -e "${YELLOW}[!] NOTICE: Please REBOOT / LOGOUT your system!${NC}\n"
+
+    pause_to_menu
 }
 
 main_menu() {
@@ -346,13 +379,19 @@ main_menu() {
         read -p "Option [1-6]: " opt
 
         case $opt in
-            1) do_backup; break ;;
-            2) do_restore; break ;;
-            3) do_dry_run; break ;;
-            4) do_rollback; break ;;
+            1) do_backup ;;
+            2) do_restore ;;
+            3) do_dry_run ;;
+            4) do_rollback ;;
             5) continue ;;
-            6) exit 0 ;;
-            *) echo -e "${RED}Invalid option!${NC}"; sleep 1 ;;
+            6) 
+               echo -e "\n${GREEN}Terima kasih telah menggunakan KalMacScript! Bye...${NC}\n"
+               exit 0 
+               ;;
+            *) 
+               echo -e "${RED}Invalid option!${NC}"
+               sleep 1 
+               ;;
         esac
     done
 }
