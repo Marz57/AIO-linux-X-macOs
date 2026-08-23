@@ -13,7 +13,7 @@ Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ek
 
 ## 🌟 Fitur Utama
 
-- 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, ` .themes`, ` .icons`, dan font sistem.
+- 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, `.themes`, `.icons`, dan font sistem.
 - ⚙️ **Dconf/GSettings Registry**: Mengatur ulang tata letak dock, shortcut, dan preferensi tampilan GNOME secara presisi.
 - 🧹 **Privacy Sanitizer**: Otomatis membersihkan data pribadi sensitif (email, recent files, online accounts) pada file dconf sebelum disimpan.
 - 🛠️ **Auto-Install Dependensi**: Mendeteksi paket sistem yang belum terpasang (`dconf-cli`, `libglib2.0-bin`, `plymouth`) dan menawarkan instalasi otomatis.
@@ -41,8 +41,9 @@ cd kali-x-macos
 chmod +x gaskeun.sh
 ```
 
-2. Menjalankan Script
-   Jalankan script menggunakan perintah:
+### 2. Menjalankan Script
+
+Jalankan script menggunakan perintah:
 
 ```
 ./gaskeun.sh
@@ -56,9 +57,10 @@ Nanti akan muncul menu interaktif:
 - Pilih 4 untuk melakukan Undo Restore (Revert) jika ingin mengembalikan tampilan ke keadaan sebelum restore.
 - Pilih 5 untuk mengganti variasi tampilan Banner ASCII.
 - Pilih 6 untuk Keluar.
+
   > Catatan Penting setelah Restore:
   > Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
-  >
+
   > 📁 Struktur Direktori Backup
   > Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
   > Kali_macOS_Backup/
