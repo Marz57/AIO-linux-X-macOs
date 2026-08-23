@@ -61,15 +61,16 @@ Nanti akan muncul menu interaktif:
   > Catatan Penting setelah Restore:
   > Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
 
-  > 📁 Struktur Direktori Backup
-  > Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
-  > Kali_macOS_Backup/
-  > ├── kali_macos_theme.tar.gz # Arsip kompresi seluruh tema, ikon, font & ekstensi
-  > ├── gnome_settings.dconf # Registry konfigurasi GNOME Shell (sanitized)
-  > ├── wallpapers/ # Salinan wallpaper aktif
-  > ├── plymouth_backup/ # File tema booting Plymouth
-  > ├── system_extensions/ # Ekstensi tingkat sistem (/usr/share)
-  > └── raw_assets/ # Folder mentahan aset UI
+  ### 📁 Struktur Direktori Backup
+
+  -> Secara otomatis script akan membuat direktori ~/Kali_macOS_Backup dengan struktur sebagai berikut:
+  -> Kali_macOS_Backup/
+  -> ├── kali_macos_theme.tar.gz # Arsip kompresi seluruh tema, ikon, font & ekstensi
+  -> ├── gnome_settings.dconf # Registry konfigurasi GNOME Shell (sanitized)
+  -> ├── wallpapers/ # Salinan wallpaper aktif
+  -> ├── plymouth_backup/ # File tema booting Plymouth
+  -> ├── system_extensions/ # Ekstensi tingkat sistem (/usr/share)
+  -> └── raw_assets/ # Folder mentahan aset UI
 
 👥 Kredit & Informasi
 
