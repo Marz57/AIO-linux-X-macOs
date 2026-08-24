@@ -1,82 +1,72 @@
-# KalMacScript Gnome macOS 🍏
+# 🍎 KalMacScript `(Debian/GNOME Edition)`
 
 _preview_
 
 <img src="screenshoot.png">
 
-**_KalMacScript_** adalah alat otomatisasi ringan (_lightweight_) yang dirancang khusus untuk melakukan **Backup**, **Restore**, **Simulasi (Dry Run)**, dan **Rollback** seluruh kustomisasi tampilan macOS pada **Kali Linux GNOME (Wayland/X11)**.
+> **KalMacScript** adalah alat otomatisasi (_bash script engine_) modern untuk mengubah tampilan sistem Linux berbasis **Debian/GNOME Desktop** menjadi bergaya **macOS** secara instan, presisi, dan aman.
 
-Script ini secara mendalam mencakup konfigurasi sistem, tema GTK, ikon, font, ekstensi GNOME Shell, wallpaper aktif, hingga animasi _booting_ (Plymouth).
+Script ini dirancang khusus untuk seluruh ekosistem distro turunan **Debian/Ubuntu** dengan dukungan penuh pada sesi **Wayland** maupun **X11**, serta **GNOME 40+**.
 
--> **CATATAN TENTANG PLYMOUTH:**
+---
 
-> Sebelum script mengeksekusi perintah penyalinan file tema boot dan pembaruan sistem bootloader (`initramfs`), sistem akan bertanya kepada pengguna apakah Plymouth ikut di-restore sekalian atau akan dilewatkan sepenuhnya tanpa merubah tampilan Plymouth bawaan.
+## ✨ Fitur Utama Versi Baru
 
-## 🌟 Fitur Utama
-
-- 🎨 **Deep Backup & Restore**: Menyimpan dan mengembalikan seluruh tema GTK-3/GTK-4, `.themes`, `.icons`, dan font sistem.
-- ⚙️ **Dconf/GSettings Registry**: Mengatur ulang tata letak dock, shortcut, dan preferensi tampilan GNOME secara presisi.
-- 🧹 **Privacy Sanitizer**: Otomatis membersihkan data pribadi sensitif (email, recent files, online accounts) pada file dconf sebelum disimpan.
-- 🛠️ **Auto-Install Dependensi**: Mendeteksi paket sistem yang belum terpasang (`dconf-cli`, `libglib2.0-bin`, `plymouth`) dan menawarkan instalasi otomatis.
-- 🧪 **Mode Simulasi (Dry Run)**: Mengecek integritas file arsip backup dan file konfigurasi tanpa mengubah atau menulis file pada sistem.
-- 🛡️ **Safety Rollback Snapshot**: Otomatis membuat titik cadangan (_snapshot_) sebelum restore, sehingga tampilan dapat dikembalikan jika terjadi pembatalan.
-- ⚓ **Dash to Dock Auto-Fix**: Mengatur posisi dan animasi dock secara otomatis agar langsung presisi bergaya macOS.
-- 🧩 **Extension Manager**: Mengamankan seluruh ekstensi GNOME Shell (User & System-wide) lengkap dengan kompilasi skema otomatis agar bebas dari bug/crash.
-- 🖼️ **Auto Wallpaper Fix**: Otomatis memulihkan wallpaper dan memperbarui _path_ ke direktori pengguna baru.
-- 🐉 **Plymouth Boot Theme**: Mengamankan animasi _booting_ macOS dan melakukan _rebuild_ `initramfs` otomatis saat restore.
-- 🔀 **Hybrid Compatibility**: Mendukung deteksi arsip terkompresi (`.tar.gz`) maupun folder aset mentah.
+- 🎯 **Debian Family Native**: Kompatibilitas 100% untuk `Kali Linux`, `Ubuntu`, `Debian`, `Linux Mint`, `Pop!_OS`, dan `Zorin OS`.
+- 🔍 **Real-Time System Check**: Visualisasi animasi pendeteksian distro, tipe sesi (`Wayland`/`X11`), dan versi `GNOME`.
+- 📁 **Auto-Folder Patcher**: Memeriksa folder tujuan (`~/.themes`, `~/.icons`, dll). Membuat struktur folder otomatis jika belum tersedia.
+- 🎨 **Libadwaita / GTK4 Fixer**: Memaksa aplikasi GTK4 modern (seperti `Nautilus` & `Gnome-Terminal`) memakai tema macOS secara presisi.
+- 🛡️ **Safety Rollback Snapshot**: Membuat cadangan snapshot sebelum restore. Fitur `Undo` siap mengembalikan tampilan awal kapan saja.
+- 🔒 **Privacy Sanitizer**: Membersihkan data sensitif, riwayat berkas, dan username akun secara otomatis saat proses _backup_.
+- 🧪 **Dry Run Mode**: Fitur pengujian simulasi tanpa merusak atau mengubah konfigurasi tampilan sistem asli.
 
 ---
 
 ## 🚀 Cara Penggunaan
 
-Script ini akan mendeteksi dan menawarkan instalasi otomatis jika ada dependensi sistem yang belum terpasang.
+Buka terminal kamu dan jalankan perintah di bawah ini satu per satu:
 
-### 1. Cloning Repositori
-
-Buka terminal dan jalankan perintah berikut:
+### 1. Clone Repositori
 
 ```bash
-git clone https://github.com/Marz57/kali-x-macos
-cd kali-x-macos
+git clone https://github.com/Marz57/AIO-linux-X-macOs
+```
+
+### 2. Masuk ke Folder Project
+
+```
+cd repo-baru
+```
+
+### 3. Berikan Izin Eksekusi pada Script
+
+```
 chmod +x gaskeun.sh
 ```
 
-### 2. Menjalankan Script
-
-Jalankan script menggunakan perintah:
+### 4. Jalankan Script Engine
 
 ```
 ./gaskeun.sh
 ```
 
-Nanti akan muncul menu interaktif:
+### 🛠️ Menu Utama Script
 
-- Pilih 1 untuk melakukan Backup seluruh tampilan macOS kamu saat ini.
-- Pilih 2 untuk melakukan Restore tampilan pada sistem Kali Linux yang baru.
-- Pilih 3 untuk menjalankan Dry Run (Simulation Mode) guna mengecek integritas backup tanpa merusak sistem.
-- Pilih 4 untuk melakukan Undo Restore (Revert) jika ingin mengembalikan tampilan ke keadaan sebelum restore.
-- Pilih 5 untuk mengganti variasi tampilan Banner ASCII.
-- Pilih 6 untuk Keluar.
+| No  | Nama Menu               | Deskripsi Fungsi                                               |
+| --- | ----------------------- | -------------------------------------------------------------- |
+| [1] | Backup Theme            | Mengambil & membersihkan konfigurasi tema dari sistem kamu     |
+| [2] | Restore macOS Theme     | Menerapkan tema macOS secara menyeluruh ke sistem Debian/GNOME |
+| [3] | Dry Run (Simulasi)      | Menguji integritas berkas backup sebelum diekstrak             |
+| [4] | Undo Restore (Rollback) | Mengembalikan tampilan ke posisi semula jika ada kendala       |
+| [5] | Switch Banner           | Mengganti gaya header visual ASCII pada script secara berkala  |
 
-  > Catatan Penting setelah Restore:
-  > Setelah proses restore selesai, wajib melakukan Reboot / Log Out agar GNOME Shell memuat ulang seluruh tema, CSS, dan ekstensi baru.
+### 📋 Persyaratan Sistem
 
-### 📁 Struktur Direktori Backup
+- OS Core: Distro Turunan Debian (Kali Linux, Ubuntu, Debian, Pop!\_OS, Linux Mint, DLL)
+- Desktop Environment: GNOME Shell (Wayland / X11)
+- Paket Dependencies: dconf-cli, libglib2.0-bin, plymouth (Script akan menginstal otomatis via apt jika belum ada)
 
-Secara otomatis script akan membuat direktori `~/Kali_macOS_Backup` dengan struktur sebagai berikut:
-
-```text
-Kali_macOS_Backup/
-├── kali_macos_theme.tar.gz   # Arsip kompresi seluruh tema, ikon, font & ekstensi
-├── gnome_settings.dconf      # Registry konfigurasi GNOME Shell (sanitized)
-├── wallpapers/               # Salinan wallpaper aktif
-├── plymouth_backup/          # File tema booting Plymouth
-├── system_extensions/        # Ekstensi tingkat sistem (/usr/share)
-└── raw_assets/               # Folder mentahan aset UI
-```
-
-👥 Kredit & Informasi
+### 👤 Author & Credits
 
 - Coded by : OfficialMarz57
 - Profile : [Official Website](https://officialmarz57.rf.gd/)
@@ -85,4 +75,5 @@ Kali_macOS_Backup/
 - Saweria : [onlymarz57](https://saweria.co/onlymarz57)
 - Special Thanks : DevlinTeamSec
 
-  > Terima kasih telah menggunakan script kami. Jika menemukan kendala atau bug, silakan hubungi kami via DM TikTok maupun Instagram dengan link diatas.
+  > ⚠️ Catatan Penting:
+  > Setelah proses Restore selesai 100%, sangat disarankan untuk melakukan Reboot atau Log Out komputer agar seluruh ikon, ekstensi shell, dan tema GTK4 termuat dengan sempurna.
