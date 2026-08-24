@@ -35,19 +35,19 @@ git clone https://github.com/Marz57/AIO-linux-X-macOs
 ### 2. Masuk ke Folder Project
 
 ```
-cd repo-baru
+cd AIO-linux-X-macOs
 ```
 
 ### 3. Berikan Izin Eksekusi pada Script
 
 ```
-chmod +x gaskeun.sh
+chmod +x run.sh
 ```
 
 ### 4. Jalankan Script Engine
 
 ```
-./gaskeun.sh
+./run.sh
 ```
 
 ### 🛠️ Menu Utama Script
