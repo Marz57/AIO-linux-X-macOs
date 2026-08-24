@@ -57,7 +57,7 @@ draw_banner() {
 
     echo -e "${CYAN}${BOLD}+---------------------------------------------+${NC}"
     echo -e "${CYAN}${BOLD}|               KalMacScript                  |${NC}"
-    echo -e "${CYAN}${BOLD}|      macOS Theme Engine for Kali GNOME      |${NC}"
+    echo -e "${CYAN}${BOLD}|   macOS Theme Engine for Debian/GNOME Family|${NC}"
     echo -e "${CYAN}${BOLD}|---------------------------------------------|${NC}"
     echo -e "${CYAN}${BOLD}| Coded by  : OfficialMarz57                  |${NC}"
     echo -e "${CYAN}${BOLD}| TikTok    : M a r z 5 7                     |${NC}"
@@ -71,10 +71,10 @@ draw_banner() {
 
 show_loading() {
     local text="$1"
-    local delay=0.08
+    local delay=0.06
     local spinstr='|/-\'
     echo -e -n "${YELLOW}[*] $text ${NC}"
-    for i in {1..15}; do
+    for i in {1..12}; do
         local temp=${spinstr#?}
         printf " [%c] " "$spinstr"
         spinstr=$temp${spinstr%"$temp"}
@@ -89,11 +89,23 @@ pause_to_menu() {
     read -p "Tekan [Enter] untuk kembali ke menu utama..."
 }
 
-# 1. Menampilkan Info OS & Session dengan Animasi (Termasuk FITUR 2: DETEKSI VERSI GNOME)
+# 1. Pengecekan OS Khusus Turunan Debian
+check_debian_family() {
+    if [ -f /etc/os-release ]; then
+        if ! grep -qiE 'debian|ubuntu|kali|mint|pop|zorin' /etc/os-release; then
+            echo -e "${RED}[!] ERROR: Script ini dikhususkan untuk distro turunan Debian/Ubuntu!${NC}"
+            echo -e "${RED}Distro kamu tidak terdeteksi berbasis Debian. Operasi dihentikan.${NC}\n"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# 2. Informas Sistem & Session
 show_system_info() {
     echo -e "${CYAN}${BOLD}[i] INFORMASI SISTEM PENGGUNA${NC}"
     
-    local OS_NAME="Linux (Unknown)"
+    local OS_NAME="Linux (Debian-based)"
     if [ -f /etc/os-release ]; then
         OS_NAME=$(grep -E '^PRETTY_NAME=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
     fi
@@ -105,7 +117,6 @@ show_system_info() {
         CURRENT_DE="GNOME (Detected via Process)"
     fi
 
-    # FITUR 2: Ambil Versi GNOME Shell
     local GNOME_VER="Unknown"
     if command -v gnome-shell &>/dev/null; then
         GNOME_VER=$(gnome-shell --version 2>/dev/null | awk '{print $3}')
@@ -118,27 +129,9 @@ show_system_info() {
     echo ""
 }
 
-# Package Manager Universal Check
-install_missing_packages() {
-    local pkgs=("$@")
-    echo -e "${BLUE}[+]${NC} Mendeteksi Manajer Paket Sistem..."
-
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update && sudo apt-get install -y "${pkgs[@]}"
-    elif command -v dnf &>/dev/null; then
-        sudo dnf install -y "${pkgs[@]}"
-    elif command -v pacman &>/dev/null; then
-        sudo pacman -Sy --noconfirm "${pkgs[@]}"
-    elif command -v zypper &>/dev/null; then
-        sudo zypper install -y "${pkgs[@]}"
-    else
-        echo -e "${RED}[!] Manajer paket tidak dikenali. Silakan pasang manual: ${pkgs[*]}${NC}"
-        return 1
-    fi
-}
-
+# 3. Manajer Paket Khusus APT (Debian/Ubuntu/Kali)
 check_dependencies() {
-    echo -e "${BLUE}[+]${NC} Checking system dependencies..."
+    echo -e "${BLUE}[+]${NC} Memeriksa dependensi sistem (APT)..."
     local MISSING_PKGS=()
 
     command -v dconf &>/dev/null || MISSING_PKGS+=("dconf-cli")
@@ -149,21 +142,21 @@ check_dependencies() {
     fi
 
     if [ "${#MISSING_PKGS[@]}" -gt 0 ]; then
-        echo -e "${YELLOW}[!] Paket yang dibutuhkan belum terinstall: ${MISSING_PKGS[*]}${NC}"
-        read -p "Apakah Anda ingin memasang dependensi otomatis? (y/n): " dep_confirm
+        echo -e "${YELLOW}[!] Paket wajib belum terpasang: ${MISSING_PKGS[*]}${NC}"
+        read -p "Pasang dependensi secara otomatis via APT? (y/n): " dep_confirm
         if [[ "$dep_confirm" =~ ^[Yy]$ ]]; then
-            install_missing_packages "${MISSING_PKGS[@]}"
+            sudo apt-get update && sudo apt-get install -y "${MISSING_PKGS[@]}"
         else
-            echo -e "${RED}[!] Dependensi wajib tidak terpenuhi. Operasi dibatalkan.${NC}"
-            pause_to_menu
+            echo -e "${RED}[!] Dependensi tidak lengkap. Operasi dibatalkan.${NC}"
             return 1
         fi
     fi
+    return 0
 }
 
-# Pengecekan Folder Komponen Utama Sebelum Replace
+# 4. Pengecekan Folder Komponen Utama
 check_and_prepare_folders() {
-    echo -e "${CYAN}${BOLD}[+] MEMERIKSA DAN MENYIAPKAN FOLDER TUJUAN RESTORE${NC}"
+    echo -e "${CYAN}${BOLD}[+] MEMERIKSA FOLDER KOMPONEN TUJUAN${NC}"
 
     local REQUIRED_FOLDERS=(
         "$HOME/.themes"
@@ -187,8 +180,6 @@ check_and_prepare_folders() {
     done
 
     local PLYMOUTH_SYS_DIR="/usr/share/plymouth/themes"
-    [ -d "/etc/plymouth" ] && PLYMOUTH_SYS_DIR="/usr/share/plymouth/themes"
-    
     show_loading "Memeriksa folder Plymouth Sistem [$PLYMOUTH_SYS_DIR]"
     if [ ! -d "$PLYMOUTH_SYS_DIR" ]; then
         MISSING_FOLDERS+=("$PLYMOUTH_SYS_DIR")
@@ -196,13 +187,13 @@ check_and_prepare_folders() {
 
     echo ""
     if [ "${#MISSING_FOLDERS[@]}" -gt 0 ]; then
-        echo -e "${YELLOW}[!] Ditemukan beberapa folder komponen yang belum ada di sistem kamu:${NC}"
+        echo -e "${YELLOW}[!] Folder komponen berikut belum ada di sistem kamu:${NC}"
         for missing in "${MISSING_FOLDERS[@]}"; do
             echo -e "    ${RED}- $missing${NC}"
         done
         echo ""
-        echo -e " ${CYAN}[1]${NC} Buat folder yang belum ada secara otomatis"
-        echo -e " ${CYAN}[2]${NC} Batalkan Restore & Kembali ke Menu Utama"
+        echo -e " ${CYAN}[1]${NC} Buat semua folder otomatis (Rekomendasi)"
+        echo -e " ${CYAN}[2]${NC} Batalkan Restore & Kembali ke Menu"
         echo ""
         read -p "Pilihan [1-2]: " folder_opt
 
@@ -215,49 +206,43 @@ check_and_prepare_folders() {
                     mkdir -p "$missing" 2>/dev/null
                 fi
             done
-            echo -e "${GREEN}[+] Semua folder berhasil dibuat!${NC}\n"
+            echo -e "${GREEN}[+] Semua folder siap!${NC}\n"
         else
-            echo -e "${RED}[!] Operasi restore dibatalkan oleh pengguna.${NC}"
+            echo -e "${RED}[!] Restorasi dibatalkan oleh pengguna.${NC}"
             return 1
         fi
     else
-        echo -e "${GREEN}[OK] Semua folder komponen tujuan sudah lengkap & siap di-replace!${NC}\n"
+        echo -e "${GREEN}[OK] Seluruh folder komponen tujuan sudah lengkap!${NC}\n"
     fi
     return 0
 }
 
-# FITUR 3: LIBADWAITA / GTK4 AUTO-PATCHER (Memaksa aplikasi GTK4 memakai tema macOS)
+# 5. Patch Presisi Libadwaita / GTK4
 patch_libadwaita_gtk4() {
-    echo -e "${BLUE}[+]${NC} Applying Libadwaita / GTK4 macOS theme patch..."
+    echo -e "${BLUE}[+]${NC} Menilai & Menerapkan Patch GTK4 Libadwaita..."
     mkdir -p ~/.config/gtk-4.0
 
-    # Mencari file gtk.css tema macOS yang sedang aktif
-    local ACTIVE_THEME
-    ACTIVE_THEME=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")
+    local MACOS_GTK4_CSS
+    MACOS_GTK4_CSS=$(find "$HOME/.themes" "$HOME/.local/share/themes" -type f -path "*/gtk-4.0/gtk.css" 2>/dev/null | head -n 1)
 
-    local THEME_GTK4_CSS=""
-    if [ -f "$HOME/.themes/$ACTIVE_THEME/gtk-4.0/gtk.css" ]; then
-        THEME_GTK4_CSS="$HOME/.themes/$ACTIVE_THEME/gtk-4.0/gtk.css"
-    elif [ -f "$HOME/.local/share/themes/$ACTIVE_THEME/gtk-4.0/gtk.css" ]; then
-        THEME_GTK4_CSS="$HOME/.local/share/themes/$ACTIVE_THEME/gtk-4.0/gtk.css"
-    fi
-
-    if [ -n "$THEME_GTK4_CSS" ]; then
-        cp -f "$THEME_GTK4_CSS" ~/.config/gtk-4.0/gtk.css 2>/dev/null
-        [ -f "$(dirname "$THEME_GTK4_CSS")/gtk-dark.css" ] && cp -f "$(dirname "$THEME_GTK4_CSS")/gtk-dark.css" ~/.config/gtk-4.0/gtk-dark.css 2>/dev/null
-        [ -d "$(dirname "$THEME_GTK4_CSS")/assets" ] && cp -rf "$(dirname "$THEME_GTK4_CSS")/assets" ~/.config/gtk-4.0/ 2>/dev/null
+    if [ -n "$MACOS_GTK4_CSS" ]; then
+        cp -f "$MACOS_GTK4_CSS" ~/.config/gtk-4.0/gtk.css 2>/dev/null
+        local DIR_PATH
+        DIR_PATH=$(dirname "$MACOS_GTK4_CSS")
+        [ -f "$DIR_PATH/gtk-dark.css" ] && cp -f "$DIR_PATH/gtk-dark.css" ~/.config/gtk-4.0/gtk-dark.css 2>/dev/null
+        [ -d "$DIR_PATH/assets" ] && cp -rf "$DIR_PATH/assets" ~/.config/gtk-4.0/ 2>/dev/null
         echo -e "${GREEN}[+] Patch GTK4 Libadwaita berhasil diterapkan!${NC}"
     else
-        echo -e "${GRAY}[*] Aset GTK4 tema tidak ditemukan, melewati patch Libadwaita.${NC}"
+        echo -e "${GRAY}[*] Berkas GTK4 tema macOS tidak ditemukan, melewati patch.${NC}"
     fi
 }
 
 create_rollback_snapshot() {
-    echo -e "${BLUE}[+]${NC} Creating safety rollback snapshot..."
+    echo -e "${BLUE}[+]${NC} Membuat snapshot rollback keamanan..."
     rm -rf "$ROLLBACK_DIR"
     mkdir -p "$ROLLBACK_DIR"
     dconf dump /org/gnome/ > "$ROLLBACK_DIR/snapshot_settings.dconf"
-    echo -e "${GREEN}[+] Rollback snapshot tersimpan di $ROLLBACK_DIR${NC}"
+    echo -e "${GREEN}[+] Snapshot rollback tersimpan di $ROLLBACK_DIR${NC}"
 }
 
 do_rollback() {
@@ -268,27 +253,28 @@ do_rollback() {
         return 1
     fi
 
-    echo -e "${YELLOW}[*] Restoring original system state from snapshot...${NC}\n"
+    echo -e "${YELLOW}[*] Mengembalikan tampilan ke posisi semula sebelum restore...${NC}\n"
     dconf load /org/gnome/ < "$ROLLBACK_DIR/snapshot_settings.dconf" 2>/dev/null
-    echo -e "${GREEN}${BOLD}[+] Tampilan sistem berhasil dikembalikan ke keadaan sebelum restore!${NC}\n"
+    echo -e "${GREEN}${BOLD}[+] Tampilan berhasil dikembalikan ke keadaan awal!${NC}\n"
     pause_to_menu
 }
 
 do_dry_run() {
     draw_banner
+    check_debian_family || { pause_to_menu; return 1; }
     show_system_info
-    echo -e "${YELLOW}[*] Running System Simulation Mode (Dry Run)...${NC}\n"
+    echo -e "${YELLOW}[*] Menjalankan Mode Simulasi (Dry Run)...${NC}\n"
 
-    check_dependencies || return
+    check_dependencies || { pause_to_menu; return 1; }
 
-    echo -e "${BLUE}[+]${NC} Checking backup directory..."
+    echo -e "${BLUE}[+]${NC} Memeriksa direktori backup..."
     if [ ! -d "$BACKUP_DIR" ]; then
-        echo -e "${RED}[!] FAIL: Backup directory ($BACKUP_DIR) tidak ditemukan!${NC}"
+        echo -e "${RED}[!] FAIL: Folder backup ($BACKUP_DIR) tidak ditemukan!${NC}"
     else
-        echo -e "${GREEN}[OK] Directory backup ditemukan.${NC}"
+        echo -e "${GREEN}[OK] Folder backup ditemukan.${NC}"
     fi
 
-    echo -e "${BLUE}[+]${NC} Checking archive integrity..."
+    echo -e "${BLUE}[+]${NC} Memeriksa integritas arsip..."
     if [ -f "$TAR_FILE" ]; then
         if tar -tzf "$TAR_FILE" &>/dev/null; then
             echo -e "${GREEN}[OK] File tar.gz valid dan dapat diekstrak.${NC}"
@@ -297,23 +283,23 @@ do_dry_run() {
         fi
     fi
 
-    echo -e "${BLUE}[+]${NC} Checking dconf configuration file..."
+    echo -e "${BLUE}[+]${NC} Memeriksa berkas konfigurasi dconf..."
     if [ -f "$DCONF_FILE" ]; then
         echo -e "${GREEN}[OK] File dconf tersedia.${NC}"
     else
-        echo -e "${YELLOW}[!] WARNING: File dconf settings tidak ditemukan.${NC}"
+        echo -e "${YELLOW}[!] WARNING: File dconf tidak ditemukan.${NC}"
     fi
 
     echo ""
-    show_loading "Menganalisis hasil simulasi..."
-    sleep 1
+    show_loading "Menganalisis simulasi..."
+    sleep 0.5
 
-    echo -e "\n${GREEN}${BOLD}[+] SIMULASI SELESAI. Sistem siap untuk operasi Restore asli!${NC}\n"
+    echo -e "\n${GREEN}${BOLD}[+] SIMULASI SELESAI. Sistem siap untuk Restore!${NC}\n"
     pause_to_menu
 }
 
 auto_fix_dash_to_dock() {
-    echo -e "${BLUE}[+]${NC} Configuring & Auto-Fixing Dash to Dock..."
+    echo -e "${BLUE}[+]${NC} Mengonfigurasi Dash to Dock..."
     gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM' 2>/dev/null || true
     gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false 2>/dev/null || true
     gsettings set org.gnome.shell.extensions.dash-to-dock transparency-mode 'DYNAMIC' 2>/dev/null || true
@@ -323,18 +309,15 @@ auto_fix_dash_to_dock() {
 handle_restore_error() {
     local STEP_NAME="$1"
     echo -e "\n${RED}${BOLD}[!] ERROR CRITICAL:${NC} ${RED}Gagal pada proses: ${STEP_NAME}${NC}"
-    echo -e "${YELLOW}[?] Proses restore mengalami kendala yang dapat membuat tampilan tidak sempurna.${NC}"
-    echo -e " ${CYAN}[1]${NC} Tetap Lanjutkan Restore (Abaikan Error)"
-    echo -e " ${CYAN}[2]${NC} Batalkan & Batalkan Perubahan (Kembali ke Semula)"
+    echo -e " ${CYAN}[1]${NC} Tetap Lanjutkan Restore"
+    echo -e " ${CYAN}[2]${NC} Batalkan & Undo Perubahan"
     echo ""
     read -p "Pilihan [1-2]: " err_opt
     case $err_opt in
         1)
-            echo -e "${YELLOW}[*] Melanjutkan proses restore dengan potensi kerugian tampilan...${NC}\n"
             return 0
             ;;
         *)
-            echo -e "${RED}[!] Membatalkan proses restore dan mengembalikan keadaan semula...${NC}"
             do_rollback
             ;;
     esac
@@ -342,13 +325,14 @@ handle_restore_error() {
 
 do_backup() {
     draw_banner
+    check_debian_family || { pause_to_menu; return 1; }
     show_system_info
-    check_dependencies || return
-    echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
+    check_dependencies || { pause_to_menu; return 1; }
     
+    echo -e "${YELLOW}[*] Memulai Backup & Sanitasi Privasi...${NC}\n"
     mkdir -p "$BACKUP_DIR" "$PLYMOUTH_DIR" "$SYS_EXT_DIR" "$WALLPAPER_DIR" "$RAW_ASSETS_DIR"
 
-    echo -e "${BLUE}[+]${NC} Exporting UI/Desktop Dconf Settings (Sanitized)..."
+    echo -e "${BLUE}[+]${NC} Mengeksport Konfigurasi Dconf..."
     dconf dump /org/gnome/desktop/ > "$DCONF_FILE"
     dconf dump /org/gnome/shell/ >> "$DCONF_FILE"
 
@@ -356,34 +340,27 @@ do_backup() {
     sed -i "s|/home/[^/]*|~|g" "$DCONF_FILE"
     sed -i '/[a-zA-Z0-9._%+-]\+@[a-zA-Z0-9.-]\+\.[a-zA-Z]\{2,\}/d' "$DCONF_FILE" 2>/dev/null || true
     sed -i '/recent-files/d' "$DCONF_FILE" 2>/dev/null || true
-    sed -i '/online-accounts/d' "$DCONF_FILE" 2>/dev/null || true
 
-    echo -e "${BLUE}[+]${NC} Backing up active Wallpaper..."
+    echo -e "${BLUE}[+]${NC} Mengambil Wallpaper Aktif..."
     BG_URI=$(gsettings get org.gnome.desktop.background picture-uri 2>/dev/null | tr -d "'")
-    BG_URI_DARK=$(gsettings get org.gnome.desktop.background picture-uri-dark 2>/dev/null | tr -d "'")
     BG_PATH=$(echo "$BG_URI" | sed 's|file://||')
-    BG_PATH_DARK=$(echo "$BG_URI_DARK" | sed 's|file://||')
     [ -f "$BG_PATH" ] && cp "$BG_PATH" "$WALLPAPER_DIR/"
-    [ -f "$BG_PATH_DARK" ] && cp "$BG_PATH_DARK" "$WALLPAPER_DIR/"
 
     if [ -d "/usr/share/gnome-shell/extensions" ]; then
-        echo -e "${BLUE}[+]${NC} Backing up System Extensions..."
+        echo -e "${BLUE}[+]${NC} Menyalin Ekstensi Sistem..."
         cp -r /usr/share/gnome-shell/extensions/* "$SYS_EXT_DIR/" 2>/dev/null || true
     fi
 
-    echo -e "${BLUE}[+]${NC} Backing up Plymouth Theme..."
-    CURRENT_PLYMOUTH=""
+    echo -e "${BLUE}[+]${NC} Menyalin Tema Plymouth..."
     if command -v plymouth-set-default-theme &>/dev/null; then
         CURRENT_PLYMOUTH=$(plymouth-set-default-theme 2>/dev/null)
-    fi
-    if [ -n "$CURRENT_PLYMOUTH" ]; then
-        echo "$CURRENT_PLYMOUTH" > "$PLYMOUTH_DIR/current_theme.txt"
-        if [ -d "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" ]; then
-            sudo cp -r "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" "$PLYMOUTH_DIR/"
+        if [ -n "$CURRENT_PLYMOUTH" ]; then
+            echo "$CURRENT_PLYMOUTH" > "$PLYMOUTH_DIR/current_theme.txt"
+            [ -d "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" ] && sudo cp -r "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" "$PLYMOUTH_DIR/"
         fi
     fi
 
-    echo -e "${BLUE}[+]${NC} Collecting themes, icons, fonts & user extensions..."
+    echo -e "${BLUE}[+]${NC} Mengumpulkan Tema, Ikon, Font & Ekstensi..."
     cp -r ~/.themes "$RAW_ASSETS_DIR/" 2>/dev/null || true
     cp -r ~/.icons "$RAW_ASSETS_DIR/" 2>/dev/null || true
     cp -r ~/.local/share/themes "$RAW_ASSETS_DIR/" 2>/dev/null || true
@@ -397,36 +374,31 @@ do_backup() {
 
     echo ""
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
-    echo -e "${GREEN}${BOLD}|      BACKUP & PRIVACY CLEANUP COMPLETED     |${NC}"
-    echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
-    echo -e "${CYAN}Path : $BACKUP_DIR${NC}"
-    echo -e "${CYAN}Size : $(du -h "$TAR_FILE" 2>/dev/null | cut -f1)${NC}\n"
+    echo -e "${GREEN}${BOLD}|             BACKUP COMPLETED                |${NC}"
+    echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}\n"
 
     pause_to_menu
 }
 
 do_restore() {
     draw_banner
+    check_debian_family || { pause_to_menu; return 1; }
     show_system_info
-    check_dependencies || return
+    check_dependencies || { pause_to_menu; return 1; }
 
     if [ ! -d "$BACKUP_DIR" ]; then
-        echo -e "${RED}[!] ERROR: Backup directory not found!${NC}\n"
+        echo -e "${RED}[!] ERROR: Folder backup tidak ditemukan!${NC}\n"
         pause_to_menu
         return 1
     fi
 
     CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
-    if [ -z "$CURRENT_DE" ]; then
-        if pgrep -x "gnome-shell" &>/dev/null; then
-            CURRENT_DE="GNOME"
-        fi
+    if [ -z "$CURRENT_DE" ] && pgrep -x "gnome-shell" &>/dev/null; then
+        CURRENT_DE="GNOME"
     fi
 
     if [[ ! "$(echo "$CURRENT_DE" | tr '[:upper:]' '[:lower:]')" =~ gnome ]]; then
-        echo -e "${RED}[!] ERROR: Incompatible Desktop Environment!${NC}"
-        echo -e "${RED}Backup dibuat untuk GNOME Desktop, sedangkan sistem kamu menggunakan: ${YELLOW}${CURRENT_DE:-Unknown}${NC}"
-        echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
+        echo -e "${RED}[!] ERROR: Lingkungan desktop bukan GNOME! (${CURRENT_DE:-Unknown})${NC}\n"
         pause_to_menu
         return 1
     fi
@@ -435,48 +407,36 @@ do_restore() {
 
     create_rollback_snapshot
 
-    echo -e "${YELLOW}[*] Starting restore engine...${NC}\n"
+    echo -e "${YELLOW}[*] Memulai Restorasi Tema macOS...${NC}\n"
 
     if [ -f "$TAR_FILE" ]; then
-        echo -e "${BLUE}[+]${NC} Extracting theme archive to home..."
-        if ! tar -xzf "$TAR_FILE" -C "$HOME" 2>/dev/null; then
-            handle_restore_error "Ekstraksi Arsip Tema (tar.gz)"
-        fi
+        echo -e "${BLUE}[+]${NC} Mengekstrak arsip tema ke Home..."
+        tar -xzf "$TAR_FILE" -C "$HOME" 2>/dev/null || handle_restore_error "Ekstraksi Tema"
     elif [ -d "$RAW_ASSETS_DIR" ]; then
-        echo -e "${BLUE}[+]${NC} Copying raw assets to home..."
-        if ! cp -r "$RAW_ASSETS_DIR"/* "$HOME/" 2>/dev/null; then
-            handle_restore_error "Salin Aset Mentah (raw_assets)"
-        fi
+        echo -e "${BLUE}[+]${NC} Menyalin aset tema mentah..."
+        cp -r "$RAW_ASSETS_DIR"/* "$HOME/" 2>/dev/null || handle_restore_error "Menyalin Aset"
     fi
 
-    echo -e "${BLUE}[+]${NC} Compiling schemas & setting permissions..."
+    echo -e "${BLUE}[+]${NC} Mengompilasi skema ekstensi..."
     chmod -R 755 ~/.local/share/gnome-shell/extensions/ 2>/dev/null || true
     for dir in ~/.local/share/gnome-shell/extensions/*/; do
-        if [ -d "${dir}schemas" ]; then
-            glib-compile-schemas "${dir}schemas" 2>/dev/null || true
-        fi
+        [ -d "${dir}schemas" ] && glib-compile-schemas "${dir}schemas" 2>/dev/null || true
     done
 
     if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR" 2>/dev/null)" ]; then
-        echo -e "${BLUE}[+]${NC} Restoring system-wide extensions..."
-        if ! sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null; then
-            handle_restore_error "Restorasi Ekstensi Sistem"
-        fi
-    else
-        echo -e "${GRAY}[*] Tidak ada ekstensi sistem untuk direstore, melewatinya...${NC}"
+        echo -e "${BLUE}[+]${NC} Mengembalikan Ekstensi Sistem..."
+        sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null || true
     fi
 
     if [ -f "$DCONF_FILE" ]; then
-        echo -e "${BLUE}[+]${NC} Applying Dconf configuration..."
-        if ! dconf load /org/gnome/ < "$DCONF_FILE" 2>/dev/null; then
-            handle_restore_error "Penerapan Konfigurasi Dconf"
-        fi
+        echo -e "${BLUE}[+]${NC} Mengaplikasikan Konfigurasi Dconf..."
+        dconf load /org/gnome/ < "$DCONF_FILE" 2>/dev/null || handle_restore_error "Penerapan Dconf"
     fi
 
     auto_fix_dash_to_dock
 
     if [ -d "$WALLPAPER_DIR" ] && [ "$(ls -A "$WALLPAPER_DIR")" ]; then
-        echo -e "${BLUE}[+]${NC} Restoring wallpaper settings..."
+        echo -e "${BLUE}[+]${NC} Mengatur Wallpaper..."
         mkdir -p "$HOME/Pictures"
         cp "$WALLPAPER_DIR"/* "$HOME/Pictures/" 2>/dev/null || true
         FIRST_WP=$(ls "$WALLPAPER_DIR" | head -n 1)
@@ -490,47 +450,35 @@ do_restore() {
     if [ -f "$PLYMOUTH_DIR/current_theme.txt" ]; then
         echo ""
         echo -e "${YELLOW}[?] Konfirmasi Restorasi Tema Plymouth Booting:${NC}"
-        echo -e " ${CYAN}[1]${NC} Ya, ganti tema Plymouth dengan hasil backup"
-        echo -e " ${CYAN}[2]${NC} Tidak, biarkan tema Plymouth bawaan/normal"
+        echo -e " ${CYAN}[1]${NC} Ya, ganti tema Plymouth"
+        echo -e " ${CYAN}[2]${NC} Tidak, lewati Plymouth"
         echo ""
         read -p "Pilihan Plymouth [1-2]: " ply_opt
 
         if [ "$ply_opt" == "1" ]; then
-            echo -e "${BLUE}[+]${NC} Restoring Plymouth boot theme..."
+            echo -e "${BLUE}[+]${NC} Mengatur tema Plymouth..."
             THEME_NAME=$(cat "$PLYMOUTH_DIR/current_theme.txt")
             if [ -d "$PLYMOUTH_DIR/$THEME_NAME" ]; then
-                if ! sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/ 2>/dev/null; then
-                    handle_restore_error "Salin Tema Plymouth"
-                else
-                    sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
-                    echo -e "${BLUE}[+]${NC} Updating initramfs..."
-                    if command -v update-initramfs &>/dev/null; then
-                        sudo update-initramfs -u 2>/dev/null || true
-                    elif command -v dracut &>/dev/null; then
-                        sudo dracut --regenerate-all --force 2>/dev/null || true
-                    elif command -v mkinitcpio &>/dev/null; then
-                        sudo mkinitcpio -P 2>/dev/null || true
-                    fi
-                fi
+                sudo cp -r "$PLYMOUTH_DIR/$THEME_NAME" /usr/share/plymouth/themes/ 2>/dev/null
+                sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
+                echo -e "${BLUE}[+]${NC} Memperbarui initramfs (APT Native)..."
+                sudo update-initramfs -u 2>/dev/null || true
             fi
-        else
-            echo -e "${GRAY}[*] Melewati restorasi tema Plymouth...${NC}"
         fi
     fi
 
-    # FITUR 1: BYPASS CEK VERSI EKSTENSI (Mencegah ekstensi disable otomatis saat beda versi GNOME)
-    echo -e "${BLUE}[+]${NC} Bypassing GNOME extension version validation..."
+    # Bypass validasi versi ekstensi
     gsettings set org.gnome.shell disable-extension-version-validation true 2>/dev/null || true
     gsettings set org.gnome.shell disable-user-extensions false 2>/dev/null || true
 
-    # FITUR 3: PENERAPAN PATCH LIBADWAITA GTK4
+    # Patch GTK4 Libadwaita
     patch_libadwaita_gtk4
 
     echo ""
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
-    echo -e "${GREEN}${BOLD}|           RESTORE COMPLETED 100%            |${NC}"
+    echo -e "${GREEN}${BOLD}|          RESTORE COMPLETED 100%             |${NC}"
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
-    echo -e "${YELLOW}[!] NOTICE: Please REBOOT / LOGOUT your system!${NC}\n"
+    echo -e "${YELLOW}[!] NOTICE: Silakan REBOOT / LOGOUT komputer kamu!${NC}\n"
 
     pause_to_menu
 }
@@ -538,15 +486,15 @@ do_restore() {
 main_menu() {
     while true; do
         draw_banner
-        echo -e "${BOLD}Select Operation:${NC}"
+        echo -e "${BOLD}Pilih Operasi:${NC}"
         echo -e " ${CYAN}[1]${NC} Backup macOS Theme"
         echo -e " ${CYAN}[2]${NC} Restore macOS Theme"
-        echo -e " ${CYAN}[3]${NC} Dry Run (Simulation Mode)"
-        echo -e " ${CYAN}[4]${NC} Undo Restore (Revert to Original State)"
+        echo -e " ${CYAN}[3]${NC} Dry Run (Simulasi)"
+        echo -e " ${CYAN}[4]${NC} Undo Restore (Rollback)"
         echo -e " ${CYAN}[5]${NC} Switch Banner"
-        echo -e " ${CYAN}[6]${NC} Exit"
+        echo -e " ${CYAN}[6]${NC} Keluar"
         echo ""
-        read -p "Option [1-6]: " opt
+        read -p "Pilihan [1-6]: " opt
 
         case $opt in
             1) do_backup ;;
@@ -555,11 +503,11 @@ main_menu() {
             4) do_rollback ;;
             5) continue ;;
             6) 
-               echo -e "\n${GREEN}Terima kasih telah menggunakan KalMacScript! Bye...${NC}\n"
+               echo -e "\n${GREEN}Terima kasih! Sampai jumpa...${NC}\n"
                exit 0 
                ;;
             *) 
-               echo -e "${RED}Invalid option!${NC}"
+               echo -e "${RED}Pilihan tidak valid!${NC}"
                sleep 1 
                ;;
         esac
