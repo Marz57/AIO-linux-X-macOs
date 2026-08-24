@@ -71,22 +71,70 @@ draw_banner() {
 
 show_loading() {
     local text="$1"
-    local delay=0.1
+    local delay=0.08
     local spinstr='|/-\'
     echo -e -n "${YELLOW}[*] $text ${NC}"
-    for i in {1..20}; do
+    for i in {1..15}; do
         local temp=${spinstr#?}
         printf " [%c] " "$spinstr"
         spinstr=$temp${spinstr%"$temp"}
         sleep $delay
         printf "\b\b\b\b\b"
     done
-    echo -e " ${GREEN}[DONE]${NC}"
+    echo -e " ${GREEN}[OK]${NC}"
 }
 
 pause_to_menu() {
     echo ""
     read -p "Tekan [Enter] untuk kembali ke menu utama..."
+}
+
+# 1. Menampilkan Info OS & Session dengan Animasi (Termasuk FITUR 2: DETEKSI VERSI GNOME)
+show_system_info() {
+    echo -e "${CYAN}${BOLD}[i] INFORMASI SISTEM PENGGUNA${NC}"
+    
+    local OS_NAME="Linux (Unknown)"
+    if [ -f /etc/os-release ]; then
+        OS_NAME=$(grep -E '^PRETTY_NAME=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+    fi
+    
+    local SESSION_TYPE="${XDG_SESSION_TYPE:-Unknown}"
+    local CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
+    
+    if [ -z "$CURRENT_DE" ] && pgrep -x "gnome-shell" &>/dev/null; then
+        CURRENT_DE="GNOME (Detected via Process)"
+    fi
+
+    # FITUR 2: Ambil Versi GNOME Shell
+    local GNOME_VER="Unknown"
+    if command -v gnome-shell &>/dev/null; then
+        GNOME_VER=$(gnome-shell --version 2>/dev/null | awk '{print $3}')
+    fi
+
+    show_loading "Mendeteksi Distro OS........ [$OS_NAME]"
+    show_loading "Mendeteksi Session Type..... [$SESSION_TYPE]"
+    show_loading "Mendeteksi Desktop Env...... [${CURRENT_DE:-Unknown}]"
+    show_loading "Mendeteksi Versi GNOME...... [GNOME $GNOME_VER]"
+    echo ""
+}
+
+# Package Manager Universal Check
+install_missing_packages() {
+    local pkgs=("$@")
+    echo -e "${BLUE}[+]${NC} Mendeteksi Manajer Paket Sistem..."
+
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get update && sudo apt-get install -y "${pkgs[@]}"
+    elif command -v dnf &>/dev/null; then
+        sudo dnf install -y "${pkgs[@]}"
+    elif command -v pacman &>/dev/null; then
+        sudo pacman -Sy --noconfirm "${pkgs[@]}"
+    elif command -v zypper &>/dev/null; then
+        sudo zypper install -y "${pkgs[@]}"
+    else
+        echo -e "${RED}[!] Manajer paket tidak dikenali. Silakan pasang manual: ${pkgs[*]}${NC}"
+        return 1
+    fi
 }
 
 check_dependencies() {
@@ -95,18 +143,112 @@ check_dependencies() {
 
     command -v dconf &>/dev/null || MISSING_PKGS+=("dconf-cli")
     command -v glib-compile-schemas &>/dev/null || MISSING_PKGS+=("libglib2.0-bin")
-    command -v plymouth-set-default-theme &>/dev/null || MISSING_PKGS+=("plymouth")
+    
+    if ! command -v plymouth-set-default-theme &>/dev/null && ! command -v plymouth &>/dev/null; then
+        MISSING_PKGS+=("plymouth" "plymouth-themes")
+    fi
 
     if [ "${#MISSING_PKGS[@]}" -gt 0 ]; then
         echo -e "${YELLOW}[!] Paket yang dibutuhkan belum terinstall: ${MISSING_PKGS[*]}${NC}"
         read -p "Apakah Anda ingin memasang dependensi otomatis? (y/n): " dep_confirm
         if [[ "$dep_confirm" =~ ^[Yy]$ ]]; then
-            sudo apt-get update && sudo apt-get install -y "${MISSING_PKGS[@]}"
+            install_missing_packages "${MISSING_PKGS[@]}"
         else
             echo -e "${RED}[!] Dependensi wajib tidak terpenuhi. Operasi dibatalkan.${NC}"
             pause_to_menu
             return 1
         fi
+    fi
+}
+
+# Pengecekan Folder Komponen Utama Sebelum Replace
+check_and_prepare_folders() {
+    echo -e "${CYAN}${BOLD}[+] MEMERIKSA DAN MENYIAPKAN FOLDER TUJUAN RESTORE${NC}"
+
+    local REQUIRED_FOLDERS=(
+        "$HOME/.themes"
+        "$HOME/.icons"
+        "$HOME/.local/share/themes"
+        "$HOME/.local/share/icons"
+        "$HOME/.local/share/gnome-shell/extensions"
+        "$HOME/.local/share/fonts"
+        "$HOME/.config/gtk-3.0"
+        "$HOME/.config/gtk-4.0"
+        "$HOME/Pictures"
+    )
+
+    local MISSING_FOLDERS=()
+
+    for folder in "${REQUIRED_FOLDERS[@]}"; do
+        show_loading "Memeriksa folder: $folder"
+        if [ ! -d "$folder" ]; then
+            MISSING_FOLDERS+=("$folder")
+        fi
+    done
+
+    local PLYMOUTH_SYS_DIR="/usr/share/plymouth/themes"
+    [ -d "/etc/plymouth" ] && PLYMOUTH_SYS_DIR="/usr/share/plymouth/themes"
+    
+    show_loading "Memeriksa folder Plymouth Sistem [$PLYMOUTH_SYS_DIR]"
+    if [ ! -d "$PLYMOUTH_SYS_DIR" ]; then
+        MISSING_FOLDERS+=("$PLYMOUTH_SYS_DIR")
+    fi
+
+    echo ""
+    if [ "${#MISSING_FOLDERS[@]}" -gt 0 ]; then
+        echo -e "${YELLOW}[!] Ditemukan beberapa folder komponen yang belum ada di sistem kamu:${NC}"
+        for missing in "${MISSING_FOLDERS[@]}"; do
+            echo -e "    ${RED}- $missing${NC}"
+        done
+        echo ""
+        echo -e " ${CYAN}[1]${NC} Buat folder yang belum ada secara otomatis"
+        echo -e " ${CYAN}[2]${NC} Batalkan Restore & Kembali ke Menu Utama"
+        echo ""
+        read -p "Pilihan [1-2]: " folder_opt
+
+        if [ "$folder_opt" == "1" ]; then
+            echo -e "${BLUE}[+] Membuat folder yang dibutuhkan...${NC}"
+            for missing in "${MISSING_FOLDERS[@]}"; do
+                if [[ "$missing" == /usr/* ]] || [[ "$missing" == /etc/* ]]; then
+                    sudo mkdir -p "$missing" 2>/dev/null
+                else
+                    mkdir -p "$missing" 2>/dev/null
+                fi
+            done
+            echo -e "${GREEN}[+] Semua folder berhasil dibuat!${NC}\n"
+        else
+            echo -e "${RED}[!] Operasi restore dibatalkan oleh pengguna.${NC}"
+            return 1
+        fi
+    else
+        echo -e "${GREEN}[OK] Semua folder komponen tujuan sudah lengkap & siap di-replace!${NC}\n"
+    fi
+    return 0
+}
+
+# FITUR 3: LIBADWAITA / GTK4 AUTO-PATCHER (Memaksa aplikasi GTK4 memakai tema macOS)
+patch_libadwaita_gtk4() {
+    echo -e "${BLUE}[+]${NC} Applying Libadwaita / GTK4 macOS theme patch..."
+    mkdir -p ~/.config/gtk-4.0
+
+    # Mencari file gtk.css tema macOS yang sedang aktif
+    local ACTIVE_THEME
+    ACTIVE_THEME=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")
+
+    local THEME_GTK4_CSS=""
+    if [ -f "$HOME/.themes/$ACTIVE_THEME/gtk-4.0/gtk.css" ]; then
+        THEME_GTK4_CSS="$HOME/.themes/$ACTIVE_THEME/gtk-4.0/gtk.css"
+    elif [ -f "$HOME/.local/share/themes/$ACTIVE_THEME/gtk-4.0/gtk.css" ]; then
+        THEME_GTK4_CSS="$HOME/.local/share/themes/$ACTIVE_THEME/gtk-4.0/gtk.css"
+    fi
+
+    if [ -n "$THEME_GTK4_CSS" ]; then
+        cp -f "$THEME_GTK4_CSS" ~/.config/gtk-4.0/gtk.css 2>/dev/null
+        [ -f "$(dirname "$THEME_GTK4_CSS")/gtk-dark.css" ] && cp -f "$(dirname "$THEME_GTK4_CSS")/gtk-dark.css" ~/.config/gtk-4.0/gtk-dark.css 2>/dev/null
+        [ -d "$(dirname "$THEME_GTK4_CSS")/assets" ] && cp -rf "$(dirname "$THEME_GTK4_CSS")/assets" ~/.config/gtk-4.0/ 2>/dev/null
+        echo -e "${GREEN}[+] Patch GTK4 Libadwaita berhasil diterapkan!${NC}"
+    else
+        echo -e "${GRAY}[*] Aset GTK4 tema tidak ditemukan, melewati patch Libadwaita.${NC}"
     fi
 }
 
@@ -134,6 +276,7 @@ do_rollback() {
 
 do_dry_run() {
     draw_banner
+    show_system_info
     echo -e "${YELLOW}[*] Running System Simulation Mode (Dry Run)...${NC}\n"
 
     check_dependencies || return
@@ -199,6 +342,7 @@ handle_restore_error() {
 
 do_backup() {
     draw_banner
+    show_system_info
     check_dependencies || return
     echo -e "${YELLOW}[*] Starting deep backup with Privacy Sanitizer...${NC}\n"
     
@@ -228,7 +372,10 @@ do_backup() {
     fi
 
     echo -e "${BLUE}[+]${NC} Backing up Plymouth Theme..."
-    CURRENT_PLYMOUTH=$(plymouth-set-default-theme 2>/dev/null)
+    CURRENT_PLYMOUTH=""
+    if command -v plymouth-set-default-theme &>/dev/null; then
+        CURRENT_PLYMOUTH=$(plymouth-set-default-theme 2>/dev/null)
+    fi
     if [ -n "$CURRENT_PLYMOUTH" ]; then
         echo "$CURRENT_PLYMOUTH" > "$PLYMOUTH_DIR/current_theme.txt"
         if [ -d "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" ]; then
@@ -260,6 +407,7 @@ do_backup() {
 
 do_restore() {
     draw_banner
+    show_system_info
     check_dependencies || return
 
     if [ ! -d "$BACKUP_DIR" ]; then
@@ -269,13 +417,21 @@ do_restore() {
     fi
 
     CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
-    if [[ ! "$CURRENT_DE" =~ [Gg][Nn][Oo][Mm][Ee] ]]; then
+    if [ -z "$CURRENT_DE" ]; then
+        if pgrep -x "gnome-shell" &>/dev/null; then
+            CURRENT_DE="GNOME"
+        fi
+    fi
+
+    if [[ ! "$(echo "$CURRENT_DE" | tr '[:upper:]' '[:lower:]')" =~ gnome ]]; then
         echo -e "${RED}[!] ERROR: Incompatible Desktop Environment!${NC}"
         echo -e "${RED}Backup dibuat untuk GNOME Desktop, sedangkan sistem kamu menggunakan: ${YELLOW}${CURRENT_DE:-Unknown}${NC}"
         echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
         pause_to_menu
         return 1
     fi
+
+    check_and_prepare_folders || { pause_to_menu; return 1; }
 
     create_rollback_snapshot
 
@@ -301,11 +457,13 @@ do_restore() {
         fi
     done
 
-    if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR")" ]; then
+    if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR" 2>/dev/null)" ]; then
         echo -e "${BLUE}[+]${NC} Restoring system-wide extensions..."
         if ! sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null; then
             handle_restore_error "Restorasi Ekstensi Sistem"
         fi
+    else
+        echo -e "${GRAY}[*] Tidak ada ekstensi sistem untuk direstore, melewatinya...${NC}"
     fi
 
     if [ -f "$DCONF_FILE" ]; then
@@ -346,7 +504,13 @@ do_restore() {
                 else
                     sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
                     echo -e "${BLUE}[+]${NC} Updating initramfs..."
-                    sudo update-initramfs -u 2>/dev/null || true
+                    if command -v update-initramfs &>/dev/null; then
+                        sudo update-initramfs -u 2>/dev/null || true
+                    elif command -v dracut &>/dev/null; then
+                        sudo dracut --regenerate-all --force 2>/dev/null || true
+                    elif command -v mkinitcpio &>/dev/null; then
+                        sudo mkinitcpio -P 2>/dev/null || true
+                    fi
                 fi
             fi
         else
@@ -354,7 +518,13 @@ do_restore() {
         fi
     fi
 
+    # FITUR 1: BYPASS CEK VERSI EKSTENSI (Mencegah ekstensi disable otomatis saat beda versi GNOME)
+    echo -e "${BLUE}[+]${NC} Bypassing GNOME extension version validation..."
+    gsettings set org.gnome.shell disable-extension-version-validation true 2>/dev/null || true
     gsettings set org.gnome.shell disable-user-extensions false 2>/dev/null || true
+
+    # FITUR 3: PENERAPAN PATCH LIBADWAITA GTK4
+    patch_libadwaita_gtk4
 
     echo ""
     echo -e "${GREEN}${BOLD}+---------------------------------------------+${NC}"
