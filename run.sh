@@ -487,7 +487,7 @@ main_menu() {
     while true; do
         draw_banner
         echo -e "${BOLD}Pilih Operasi:${NC}"
-        echo -e " ${CYAN}[1]${NC} Backup macOS Theme"
+        echo -e " ${CYAN}[1]${NC} Backup Theme"
         echo -e " ${CYAN}[2]${NC} Restore macOS Theme"
         echo -e " ${CYAN}[3]${NC} Dry Run (Simulasi)"
         echo -e " ${CYAN}[4]${NC} Undo Restore (Rollback)"
