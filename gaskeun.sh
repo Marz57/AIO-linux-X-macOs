@@ -89,42 +89,19 @@ pause_to_menu() {
     read -p "Tekan [Enter] untuk kembali ke menu utama..."
 }
 
-# Auto detect & install via Paket Manager Distro Apapun (Universal)
-install_missing_packages() {
-    local pkgs=("$@")
-    echo -e "${BLUE}[+]${NC} Mendeteksi Manajer Paket Sistem..."
-
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update && sudo apt-get install -y "${pkgs[@]}"
-    elif command -v dnf &>/dev/null; then
-        sudo dnf install -y "${pkgs[@]}"
-    elif command -v pacman &>/dev/null; then
-        sudo pacman -Sy --noconfirm "${pkgs[@]}"
-    elif command -v zypper &>/dev/null; then
-        sudo zypper install -y "${pkgs[@]}"
-    else
-        echo -e "${RED}[!] Manajer paket tidak dikenali. Silakan pasang manual: ${pkgs[*]}${NC}"
-        return 1
-    fi
-}
-
 check_dependencies() {
     echo -e "${BLUE}[+]${NC} Checking system dependencies..."
     local MISSING_PKGS=()
 
     command -v dconf &>/dev/null || MISSING_PKGS+=("dconf-cli")
     command -v glib-compile-schemas &>/dev/null || MISSING_PKGS+=("libglib2.0-bin")
-    
-    # Deteksi binary Plymouth untuk kompatibilitas lintas distro
-    if ! command -v plymouth-set-default-theme &>/dev/null && ! command -v plymouth &>/dev/null; then
-        MISSING_PKGS+=("plymouth" "plymouth-themes")
-    fi
+    command -v plymouth-set-default-theme &>/dev/null || MISSING_PKGS+=("plymouth")
 
     if [ "${#MISSING_PKGS[@]}" -gt 0 ]; then
         echo -e "${YELLOW}[!] Paket yang dibutuhkan belum terinstall: ${MISSING_PKGS[*]}${NC}"
         read -p "Apakah Anda ingin memasang dependensi otomatis? (y/n): " dep_confirm
         if [[ "$dep_confirm" =~ ^[Yy]$ ]]; then
-            install_missing_packages "${MISSING_PKGS[@]}"
+            sudo apt-get update && sudo apt-get install -y "${MISSING_PKGS[@]}"
         else
             echo -e "${RED}[!] Dependensi wajib tidak terpenuhi. Operasi dibatalkan.${NC}"
             pause_to_menu
@@ -251,10 +228,7 @@ do_backup() {
     fi
 
     echo -e "${BLUE}[+]${NC} Backing up Plymouth Theme..."
-    CURRENT_PLYMOUTH=""
-    if command -v plymouth-set-default-theme &>/dev/null; then
-        CURRENT_PLYMOUTH=$(plymouth-set-default-theme 2>/dev/null)
-    fi
+    CURRENT_PLYMOUTH=$(plymouth-set-default-theme 2>/dev/null)
     if [ -n "$CURRENT_PLYMOUTH" ]; then
         echo "$CURRENT_PLYMOUTH" > "$PLYMOUTH_DIR/current_theme.txt"
         if [ -d "/usr/share/plymouth/themes/$CURRENT_PLYMOUTH" ]; then
@@ -294,15 +268,8 @@ do_restore() {
         return 1
     fi
 
-    # Deteksi Desktop Environment serbaguna (fallback ke gnome-shell process check)
     CURRENT_DE="${XDG_CURRENT_DESKTOP:-$DESKTOP_SESSION}"
-    if [ -z "$CURRENT_DE" ]; then
-        if pgrep -x "gnome-shell" &>/dev/null; then
-            CURRENT_DE="GNOME"
-        fi
-    fi
-
-    if [[ ! "$(echo "$CURRENT_DE" | tr '[:upper:]' '[:lower:]')" =~ gnome ]]; then
+    if [[ ! "$CURRENT_DE" =~ [Gg][Nn][Oo][Mm][Ee] ]]; then
         echo -e "${RED}[!] ERROR: Incompatible Desktop Environment!${NC}"
         echo -e "${RED}Backup dibuat untuk GNOME Desktop, sedangkan sistem kamu menggunakan: ${YELLOW}${CURRENT_DE:-Unknown}${NC}"
         echo -e "${RED}Proses restore dibatalkan otomatis demi menjaga keamanan sistem.${NC}\n"
@@ -334,14 +301,11 @@ do_restore() {
         fi
     done
 
-    # Hanya jalankan restore jika folder system_extensions ada dan TIDAK kosong
-    if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR" 2>/dev/null)" ]; then
+    if [ -d "$SYS_EXT_DIR" ] && [ "$(ls -A "$SYS_EXT_DIR")" ]; then
         echo -e "${BLUE}[+]${NC} Restoring system-wide extensions..."
         if ! sudo cp -r "$SYS_EXT_DIR"/* /usr/share/gnome-shell/extensions/ 2>/dev/null; then
             handle_restore_error "Restorasi Ekstensi Sistem"
         fi
-    else
-        echo -e "${GRAY}[*] Tidak ada ekstensi sistem untuk direstore, melewatinya...${NC}"
     fi
 
     if [ -f "$DCONF_FILE" ]; then
@@ -382,13 +346,7 @@ do_restore() {
                 else
                     sudo plymouth-set-default-theme -R "$THEME_NAME" 2>/dev/null || true
                     echo -e "${BLUE}[+]${NC} Updating initramfs..."
-                    if command -v update-initramfs &>/dev/null; then
-                        sudo update-initramfs -u 2>/dev/null || true
-                    elif command -v dracut &>/dev/null; then
-                        sudo dracut --regenerate-all --force 2>/dev/null || true
-                    elif command -v mkinitcpio &>/dev/null; then
-                        sudo mkinitcpio -P 2>/dev/null || true
-                    fi
+                    sudo update-initramfs -u 2>/dev/null || true
                 fi
             fi
         else
